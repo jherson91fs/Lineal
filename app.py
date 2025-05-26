@@ -73,59 +73,105 @@ def calcular_vertices_2d(A_ub, b_ub):
                 vertices.append(p)
     return np.array(vertices)
 
-def graficar_2d(A, b, vertices, res):
-    fig, ax = plt.subplots(figsize=(8,6))
-    x_vals = np.linspace(0, max(vertices[:,0])*1.5, 400)
-    for coef, val in zip(A, b):
+def graficar_2d(A, b, vertices, res, tipo):
+    fig, ax = plt.subplots(figsize=(8, 6))
+    x_vals = np.linspace(0, max(vertices[:, 0]) * 1.5, 400)
+
+    # Dibujar líneas de restricción
+    for i, (coef, val) in enumerate(zip(A, b)):
         a, c = coef[0], coef[1]
+        color = f'C{i}'  # Colores únicos por restricción
         if abs(c) > 1e-10:
-            y_vals = (val - a*x_vals)/c
+            y_vals = (val - a * x_vals) / c
             y_vals = np.clip(y_vals, 0, 1e9)
-            ax.plot(x_vals, y_vals, linestyle='--')
+            ax.plot(x_vals, y_vals, linestyle='--', color=color, label=f'Restricción {i+1}')
         else:
-            x_line = val/a
-            ax.axvline(x=x_line, linestyle='--')
+            x_line = val / a
+            ax.axvline(x=x_line, linestyle='--', color=color, label=f'Restricción {i+1}')
 
-    poligono = Polygon(vertices, closed=True, fill=True, facecolor='lightgreen', alpha=0.4)
-    ax.add_patch(poligono)
+    # Dibujar región factible sombreada
+        # Dibujar región factible sombreada y vértices
+    if len(vertices) > 0:
+        ordenados = vertices[np.lexsort((vertices[:, 1], vertices[:, 0]))]
+        poligono = Polygon(ordenados, closed=True, fill=True, facecolor='lightgreen',
+                           edgecolor='green', alpha=0.5, label='Región factible')
+        ax.add_patch(poligono)
 
-    ax.plot(res.x[0], res.x[1], 'ro', markersize=10)
-    ax.annotate(f'G={-res.fun:.2f}\n({res.x[0]:.2f}, {res.x[1]:.2f})',
-                (res.x[0], res.x[1]), textcoords='offset points', xytext=(15,-30))
+        # Dibujar los puntos (vértices) con marcadores visibles
+        for i, punto in enumerate(ordenados):
+            ax.plot(punto[0], punto[1], 'ko', markersize=6)
+            ax.annotate(f'V{i+1}\n({punto[0]:.2f}, {punto[1]:.2f})',
+                        (punto[0], punto[1]), textcoords='offset points',
+                        xytext=(0,5), ha='center', fontsize=8, color='gray')
 
-    ax.set_xlim(left=0, right=max(vertices[:,0].max(), res.x[0])*1.2)
-    ax.set_ylim(bottom=0, top=max(vertices[:,1].max(), res.x[1])*1.2)
+
+    # Dibujar punto óptimo
+    valor = res.fun if tipo == 'min' else -res.fun
+    ax.plot(res.x[0], res.x[1], 'ro', markersize=10, label='Solución óptima')
+    ax.annotate(f'G={valor:.2f}\n({res.x[0]:.2f}, {res.x[1]:.2f})',
+                (res.x[0], res.x[1]), textcoords='offset points', xytext=(10, -40),
+                bbox=dict(boxstyle='round,pad=0.4', fc='yellow', alpha=0.9),
+                arrowprops=dict(arrowstyle='->', lw=2, color='black'))
+
+    # Centrar la vista en la región factible + solución
+    margen = 1
+    x_min = max(0, min(vertices[:, 0].min(), res.x[0]) - margen)
+    x_max = max(vertices[:, 0].max(), res.x[0]) + margen
+    y_min = max(0, min(vertices[:, 1].min(), res.x[1]) - margen)
+    y_max = max(vertices[:, 1].max(), res.x[1]) + margen
+
+    ax.set_xlim(x_min, x_max)
+    ax.set_ylim(y_min, y_max)
+
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
     ax.set_title("Solución Gráfica 2D")
     ax.grid(True)
+    ax.legend(loc='upper right', fontsize='small', frameon=True)
 
     output = os.path.join(app.config['UPLOAD_FOLDER'], 'grafico2d.png')
-    plt.savefig(output)
+    plt.savefig(output, bbox_inches='tight')
     plt.close()
     return output
 
-def graficar_3d(A, b, res):
-    x = np.linspace(0, max(res.x[0]*2,10), 30)
-    y = np.linspace(0, max(res.x[1]*2,10), 30)
-    X, Y = np.meshgrid(x, y)
-    surfaces = []
-    for coef, val in zip(A, b):
-        a, b_, c_ = coef
-        if abs(c_) < 1e-6:
-            continue
-        Z = (val - a*X - b_*Y)/c_
-        surfaces.append(go.Surface(z=Z, x=X, y=Y, opacity=0.4, colorscale='Viridis', showscale=False))
 
-    punto = res.x
-    punto_trace = go.Scatter3d(x=[punto[0]], y=[punto[1]], z=[punto[2]], mode='markers+text',
-                               marker=dict(size=7, color='red'), text=[f'G={-res.fun:.2f}'])
 
-    fig = go.Figure(data=surfaces + [punto_trace])
-    fig.update_layout(scene=dict(xaxis_title='x', yaxis_title='y', zaxis_title='z'),
-                      title='Solución Gráfica 3D', width=800, height=600)
+def graficar_2d_proyecciones(res, tipo):
+    x, y, z = res.x
+    valor = res.fun if tipo == 'min' else -res.fun
 
-    output = os.path.join(app.config['UPLOAD_FOLDER'], 'grafico3d.html')
-    pio.write_html(fig, file=output, auto_open=False)
-    return output
+    fig_xy, ax1 = plt.subplots()
+    ax1.plot(x, y, 'ro')
+    ax1.set_xlabel('x')
+    ax1.set_ylabel('y')
+    ax1.set_title(f'Proyección XY\nG={valor:.2f}')
+    ax1.grid(True)
+    path_xy = os.path.join(app.config['UPLOAD_FOLDER'], 'proyeccion_xy.png')
+    fig_xy.savefig(path_xy)
+    plt.close(fig_xy)
+
+    fig_xz, ax2 = plt.subplots()
+    ax2.plot(x, z, 'go')
+    ax2.set_xlabel('x')
+    ax2.set_ylabel('z')
+    ax2.set_title(f'Proyección XZ\nG={valor:.2f}')
+    ax2.grid(True)
+    path_xz = os.path.join(app.config['UPLOAD_FOLDER'], 'proyeccion_xz.png')
+    fig_xz.savefig(path_xz)
+    plt.close(fig_xz)
+
+    fig_yz, ax3 = plt.subplots()
+    ax3.plot(y, z, 'bo')
+    ax3.set_xlabel('y')
+    ax3.set_ylabel('z')
+    ax3.set_title(f'Proyección YZ\nG={valor:.2f}')
+    ax3.grid(True)
+    path_yz = os.path.join(app.config['UPLOAD_FOLDER'], 'proyeccion_yz.png')
+    fig_yz.savefig(path_yz)
+    plt.close(fig_yz)
+
+    return path_xy, path_xz, path_yz
+
 
 @app.route('/')
 def index():
@@ -195,15 +241,16 @@ def resolver():
 
         if num_vars == 2:
             vertices = calcular_vertices_2d(np.array(A_ub), np.array(b_ub))
-            grafico_path = graficar_2d(np.array(A_ub), np.array(b_ub), vertices, res)
+            grafico_path = graficar_2d(np.array(A_ub), np.array(b_ub), vertices, res, tipo)
             log_procesos.append("Generando gráfico 2D.")
             return render_template('resultado.html', resultado=resultado, imagen=grafico_path,
                                    procesos='\n'.join(log_procesos))
         else:
-            grafico_path = graficar_3d(np.array(A_ub), np.array(b_ub), res)
-            log_procesos.append("Generando gráfico 3D.")
-            return render_template('resultado_3d.html', resultado=resultado, html_path=grafico_path,
-                                   procesos='\n'.join(log_procesos))
+            img_xy, img_xz, img_yz = graficar_2d_proyecciones(res, tipo)
+            return render_template('resultado_3d.html', resultado=resultado,
+                       img_xy=img_xy, img_xz=img_xz, img_yz=img_yz,
+                       procesos='\n'.join(log_procesos))
+
 
     except Exception as e:
         return f"Error procesando la solicitud: {e}", 500

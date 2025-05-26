@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request
 import matplotlib
-matplotlib.use('Agg')  # Backend sin GUI para matplotlib
+matplotlib.use('Agg')
 import numpy as np
 from scipy.optimize import linprog
 import matplotlib.pyplot as plt
@@ -12,7 +12,6 @@ import os
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = os.path.join('static')
 
-# Parsing función objetivo que siempre usa x,y,z pero toma solo las num_vars
 def parse_func_objetivo(texto, num_vars):
     texto = texto.replace('-', '+-')
     partes = texto.split('+')
@@ -30,7 +29,6 @@ def parse_func_objetivo(texto, num_vars):
             coef['z'] = float(num)
     return [coef['x'], coef['y'], coef['z']][:num_vars]
 
-# Parsing restricciones similar, tomando solo num_vars
 def parse_restriccion(texto, num_vars):
     texto = texto.replace('-', '+-')
     if '<=' in texto:
@@ -60,7 +58,6 @@ def parse_restriccion(texto, num_vars):
             coef[2] = float(num)
     return coef[:num_vars], float(der.strip()), tipo
 
-# Calcular vertices para 2 variables
 def calcular_vertices_2d(A_ub, b_ub):
     vertices = []
     n = len(A_ub)
@@ -76,13 +73,12 @@ def calcular_vertices_2d(A_ub, b_ub):
                 vertices.append(p)
     return np.array(vertices)
 
-# Graficar 2D
 def graficar_2d(A, b, vertices, res):
     fig, ax = plt.subplots(figsize=(8,6))
     x_vals = np.linspace(0, max(vertices[:,0])*1.5, 400)
-    for i,(coef,val) in enumerate(zip(A,b)):
-        a,c = coef[0], coef[1]
-        if abs(c)>1e-10:
+    for coef, val in zip(A, b):
+        a, c = coef[0], coef[1]
+        if abs(c) > 1e-10:
             y_vals = (val - a*x_vals)/c
             y_vals = np.clip(y_vals, 0, 1e9)
             ax.plot(x_vals, y_vals, linestyle='--')
@@ -94,7 +90,7 @@ def graficar_2d(A, b, vertices, res):
     ax.add_patch(poligono)
 
     ax.plot(res.x[0], res.x[1], 'ro', markersize=10)
-    ax.annotate(f'Máx G={-res.fun:.2f}\n({res.x[0]:.2f}, {res.x[1]:.2f})',
+    ax.annotate(f'G={-res.fun:.2f}\n({res.x[0]:.2f}, {res.x[1]:.2f})',
                 (res.x[0], res.x[1]), textcoords='offset points', xytext=(15,-30))
 
     ax.set_xlim(left=0, right=max(vertices[:,0].max(), res.x[0])*1.2)
@@ -107,22 +103,21 @@ def graficar_2d(A, b, vertices, res):
     plt.close()
     return output
 
-# Graficar 3D
-def graficar_3d(A,b,res):
+def graficar_3d(A, b, res):
     x = np.linspace(0, max(res.x[0]*2,10), 30)
     y = np.linspace(0, max(res.x[1]*2,10), 30)
-    X,Y = np.meshgrid(x,y)
+    X, Y = np.meshgrid(x, y)
     surfaces = []
-    for i,(coef,val) in enumerate(zip(A,b)):
-        a,b_,c_ = coef
-        if abs(c_)<1e-6:
+    for coef, val in zip(A, b):
+        a, b_, c_ = coef
+        if abs(c_) < 1e-6:
             continue
         Z = (val - a*X - b_*Y)/c_
         surfaces.append(go.Surface(z=Z, x=X, y=Y, opacity=0.4, colorscale='Viridis', showscale=False))
 
     punto = res.x
     punto_trace = go.Scatter3d(x=[punto[0]], y=[punto[1]], z=[punto[2]], mode='markers+text',
-                               marker=dict(size=7, color='red'), text=[f'Máximo: G={-res.fun:.2f}'])
+                               marker=dict(size=7, color='red'), text=[f'G={-res.fun:.2f}'])
 
     fig = go.Figure(data=surfaces + [punto_trace])
     fig.update_layout(scene=dict(xaxis_title='x', yaxis_title='y', zaxis_title='z'),
@@ -142,7 +137,7 @@ def resolver():
         log_procesos = []
 
         num_vars = int(request.form.get('variables'))
-        if num_vars not in [2,3]:
+        if num_vars not in [2, 3]:
             return "Número de variables debe ser 2 o 3", 400
         log_procesos.append(f"Número de variables: {num_vars}")
 
@@ -151,7 +146,19 @@ def resolver():
             return "Función objetivo es requerida.", 400
         log_procesos.append(f"Función objetivo: {objetivo}")
 
-        restricciones = [request.form.get(f'restriccion{i}') for i in range(1,4) if request.form.get(f'restriccion{i}')]
+        tipo = request.form.get('tipo_opt', 'max')
+        log_procesos.append(f"Tipo de optimización: {'Minimizar' if tipo == 'min' else 'Maximizar'}")
+
+        # Restricciones dinámicas
+        restricciones = []
+        i = 1
+        while True:
+            restriccion = request.form.get(f'restriccion{i}')
+            if restriccion:
+                restricciones.append(restriccion)
+                i += 1
+            else:
+                break
         log_procesos.append(f"Restricciones: {restricciones}")
 
         f_obj = parse_func_objetivo(objetivo, num_vars)
@@ -159,39 +166,44 @@ def resolver():
 
         A_ub, b_ub = [], []
         for r in restricciones:
-            coef, val, tipo = parse_restriccion(r, num_vars)
-            log_procesos.append(f"Restricción '{r}' parseada como coef={coef}, val={val}, tipo={tipo}")
-            if tipo == '<=':
+            coef, val, tipo_r = parse_restriccion(r, num_vars)
+            log_procesos.append(f"Restricción '{r}' parseada como coef={coef}, val={val}, tipo={tipo_r}")
+            if tipo_r == '<=':
                 A_ub.append(coef)
                 b_ub.append(val)
-            elif tipo == '>=':
+            elif tipo_r == '>=':
                 A_ub.append([-c for c in coef])
                 b_ub.append(-val)
-            elif tipo == '=':
+            elif tipo_r == '=':
                 A_ub.append(coef)
                 b_ub.append(val)
                 A_ub.append([-c for c in coef])
                 b_ub.append(-val)
 
-        res = linprog(c=[-c for c in f_obj], A_ub=np.array(A_ub), b_ub=np.array(b_ub), method='highs')
+        c = f_obj if tipo == 'min' else [-c for c in f_obj]
+        res = linprog(c=c, A_ub=np.array(A_ub), b_ub=np.array(b_ub), method='highs')
         log_procesos.append("Ejecutando linprog...")
 
         if not res.success:
             log_procesos.append("No se encontró solución óptima.")
-            return render_template('resultado.html', resultado="No se encontró solución óptima.", procesos='\n'.join(log_procesos), imagen=None)
+            return render_template('resultado.html', resultado="No se encontró solución óptima.",
+                                   procesos='\n'.join(log_procesos), imagen=None)
 
-        resultado = f"Máximo G = {-res.fun:.2f}, Variables = {res.x.round(2)}"
+        valor = res.fun if tipo == 'min' else -res.fun
+        resultado = f"{'Mínimo' if tipo == 'min' else 'Máximo'} G = {valor:.2f}, Variables = {res.x.round(2)}"
         log_procesos.append(f"Resultado: {resultado}")
 
         if num_vars == 2:
             vertices = calcular_vertices_2d(np.array(A_ub), np.array(b_ub))
             grafico_path = graficar_2d(np.array(A_ub), np.array(b_ub), vertices, res)
             log_procesos.append("Generando gráfico 2D.")
-            return render_template('resultado.html', resultado=resultado, imagen=grafico_path, procesos='\n'.join(log_procesos))
+            return render_template('resultado.html', resultado=resultado, imagen=grafico_path,
+                                   procesos='\n'.join(log_procesos))
         else:
             grafico_path = graficar_3d(np.array(A_ub), np.array(b_ub), res)
             log_procesos.append("Generando gráfico 3D.")
-            return render_template('resultado_3d.html', resultado=resultado, html_path=grafico_path, procesos='\n'.join(log_procesos))
+            return render_template('resultado_3d.html', resultado=resultado, html_path=grafico_path,
+                                   procesos='\n'.join(log_procesos))
 
     except Exception as e:
         return f"Error procesando la solicitud: {e}", 500

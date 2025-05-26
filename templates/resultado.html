@@ -4,118 +4,30 @@
     <meta charset="UTF-8" />
     <title>Resultado Óptimo 2D</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #e0f7fa, #80deea);
-            margin: 0;
-            padding: 40px 20px;
-            color: #2d3748;
-            display: flex;
-            justify-content: center;
-            min-height: 100vh;
-        }
-        .container {
-            background: #ffffff;
-            max-width: 850px;
-            width: 100%;
-            border-radius: 16px;
-            padding: 30px 40px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.12);
-            box-sizing: border-box;
-        }
-        h2 {
-            color: #2b6cb0;
-            font-weight: 700;
-            margin-bottom: 30px;
-            text-align: center;
-            letter-spacing: 0.05em;
-        }
-        .resultado-text {
-            font-size: 1.4rem;
-            font-weight: 600;
-            text-align: center;
-            margin-bottom: 35px;
-            color: #1a202c;
-        }
-        img {
-            display: block;
-            max-width: 100%;
-            height: auto;
-            border-radius: 14px;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-            margin: 0 auto 40px auto;
-        }
-        h3 {
-            font-weight: 700;
-            color: #2b6cb0;
-            margin-bottom: 15px;
-            border-bottom: 2px solid #2b6cb0;
-            padding-bottom: 8px;
-        }
-        pre {
-            background: #f9fafb;
-            border: 1px solid #cbd5e1;
-            border-radius: 12px;
-            padding: 20px;
-            max-height: 320px;
-            overflow-y: auto;
-            font-family: Consolas, monospace;
-            font-size: 0.95rem;
-            color: #334155;
-            line-height: 1.5;
-            white-space: pre-wrap;
-        }
-        .volver {
-            display: inline-block;
-            margin-top: 35px;
-            padding: 12px 30px;
-            background-color: #ff9800;
-            color: white;
-            font-weight: 700;
-            font-size: 1.1rem;
-            border-radius: 14px;
-            text-decoration: none;
-            box-shadow: 0 8px 20px rgba(255, 152, 0, 0.6);
-            transition: background-color 0.3s ease, box-shadow 0.3s ease;
-            text-align: center;
-        }
-        .volver:hover,
-        .volver:focus {
-            background-color: #fb8c00;
-            box-shadow: 0 12px 30px rgba(251, 140, 0, 0.8);
-            outline: none;
-        }
-        @media (max-width: 600px) {
-            .container {
-                padding: 25px 20px;
-                border-radius: 12px;
-            }
-            h2 {
-                font-size: 1.6rem;
-                margin-bottom: 20px;
-            }
-            .resultado-text {
-                font-size: 1.1rem;
-                margin-bottom: 25px;
-            }
-            pre {
-                max-height: 220px;
-                font-size: 0.85rem;
-            }
-            .volver {
-                width: 100%;
-                padding: 14px 0;
-                font-size: 1rem;
-            }
-        }
-    </style>
+    
 </head>
 <body>
     <div class="container">
         <h2>Resultado Óptimo</h2>
-        <p class="resultado-text">{{ resultado }}</p>
-        <img src="{{ imagen }}" alt="Gráfico 2D" loading="lazy" />
+        {% if "No se encontró solución" in resultado %}
+<div class="alerta-error">
+    <svg xmlns="http://www.w3.org/2000/svg" class="icono-alerta" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <circle cx="12" cy="12" r="10" stroke-width="2"/>
+        <line x1="12" y1="8" x2="12" y2="12" stroke-width="2"/>
+        <circle cx="12" cy="16" r="1.5" fill="currentColor"/>
+    </svg>
+    <p><strong>No se encontró solución óptima.</strong> Verifica que las restricciones permitan una región factible.</p>
+</div>
+{% else %}
+<p class="resultado-text">{{ resultado }}</p>
+{% endif %}
+
+        {% if imagen %}
+  <img src="{{ imagen }}" alt="Gráfico 2D" loading="lazy" />
+{% else %}
+  <p style="text-align:center; font-style:italic;">No se generó gráfico debido a que no hay solución óptima.</p>
+{% endif %}
+
         <h3>Detalles del proceso:</h3>
         <pre>{{ procesos }}</pre>
         <a href="/" class="volver" aria-label="Volver al inicio">Volver</a>

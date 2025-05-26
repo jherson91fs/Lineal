@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Optimizador Lineal Interactivo</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <style>
+    /* Estilo para grupo de radios como tarjetas */
+    .radio-group {
+      display: flex;
+      gap: 20px;
+      margin: 15px 0 30px 0;
+    }
+    .radio-card {
+      flex: 1;
+      padding: 15px 25px;
+      border: 2px solid #80deea;
+      border-radius: 12px;
+      text-align: center;
+      cursor: pointer;
+      font-weight: 600;
+      color: #2d3748;
+      transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+      user-select: none;
+    }
+    .radio-card:hover {
+      background-color: #e0f7fa;
+      border-color: #2b6cb0;
+      box-shadow: 0 0 8px rgba(43, 108, 176, 0.5);
+    }
+    input[type="radio"] {
+      display: none;
+    }
+    input[type="radio"]:checked + label.radio-card {
+      background-color: #2b6cb0;
+      color: white;
+      border-color: #2b6cb0;
+      box-shadow: 0 0 12px rgba(43, 108, 176, 0.8);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Optimizador de Programación Lineal</h1>
+
+    <form method="POST" action="/resolver" id="formularioPL">
+
+      <label>Número de variables:</label>
+      <div class="radio-group">
+        <input type="radio" id="var2" name="variables" value="2" required checked>
+        <label for="var2" class="radio-card">2 variables</label>
+
+        <input type="radio" id="var3" name="variables" value="3">
+        <label for="var3" class="radio-card">3 variables</label>
+      </div>
+
+      <label for="objetivo">Función Objetivo:</label>
+      <input type="text" id="objetivo" name="objetivo" placeholder="Ej: 6x + 4y" required>
+
+      <label for="restriccion1">Restricción 1:</label>
+      <input type="text" id="restriccion1" name="restriccion1" placeholder="Ej: 2x + y <= 12">
+
+      <label for="restriccion2">Restricción 2:</label>
+      <input type="text" id="restriccion2" name="restriccion2" placeholder="Ej: x + 3y >= 15">
+
+      <label for="restriccion3">Restricción 3:</label>
+      <input type="text" id="restriccion3" name="restriccion3" placeholder="Ej: 4x + 2y = 20">
+
+      <button type="submit">Resolver</button>
+    </form>
+  </div>
+
+  <script>
+    const radios = document.querySelectorAll('input[name="variables"]');
+    const objetivoInput = document.getElementById('objetivo');
+    const restriccion1 = document.getElementById('restriccion1');
+    const restriccion2 = document.getElementById('restriccion2');
+    const restriccion3 = document.getElementById('restriccion3');
+
+    function actualizarPlaceholders(numVars) {
+      if (numVars === 2) {
+        objetivoInput.placeholder = "Ej: 6x + 4y";
+        restriccion1.placeholder = "Ej: 2x + y <= 12";
+        restriccion2.placeholder = "Ej: x + 3y >= 15";
+        restriccion3.placeholder = "Ej: 4x + 2y = 20";
+      } else if (numVars === 3) {
+        objetivoInput.placeholder = "Ej: 6x + 4y + 3z";
+        restriccion1.placeholder = "Ej: 2x + y + z <= 12";
+        restriccion2.placeholder = "Ej: x + 3y + 2z >= 15";
+        restriccion3.placeholder = "Ej: 4x + 2y + z = 20";
+      }
+    }
+
+    radios.forEach(radio => {
+      radio.addEventListener('change', e => {
+        const val = parseInt(e.target.value, 10);
+        actualizarPlaceholders(val);
+      });
+    });
+
+    // Inicializar al cargar la página
+    document.addEventListener('DOMContentLoaded', () => {
+      const seleccionado = Array.from(radios).find(r => r.checked);
+      if (seleccionado) actualizarPlaceholders(parseInt(seleccionado.value, 10));
+    });
+  </script>
+
+</body>
+</html>

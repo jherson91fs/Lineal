@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Optimizador Lineal Interactivo</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+</head>
+<body>
+  <div class="container">
+    <h1>Optimizador de Programación Lineal</h1>
+
+    <form method="POST" action="/resolver" id="formularioPL">
+
+      <label>Número de variables:</label>
+      <div class="radio-group">
+        <input type="radio" id="var2" name="variables" value="2" required checked>
+        <label for="var2" class="radio-card">2 variables</label>
+      </div>
+      <label>Tipo de optimización:</label>
+<div class="radio-group">
+  <input type="radio" id="max" name="tipo_opt" value="max" required checked>
+  <label for="max" class="radio-card">Maximizar</label>
+
+  <input type="radio" id="min" name="tipo_opt" value="min">
+  <label for="min" class="radio-card">Minimizar</label>
+</div>
+
+
+      <label for="objetivo">Función Objetivo(Formato Único: X+Y):</label>
+      <input type="text" id="objetivo" name="objetivo" placeholder="Ej: 6x + 4y" required>
+
+      <label for="restriccion1">Restricción 1:</label>
+      <input type="text" id="restriccion1" name="restriccion1" placeholder="Ej: 2x + y <= 12">
+
+      <label for="restriccion2">Restricción 2:</label>
+      <input type="text" id="restriccion2" name="restriccion2" placeholder="Ej: x + 3y >= 15">
+
+      <label for="restriccion3">Restricción 3:</label>
+      <input type="text" id="restriccion3" name="restriccion3" placeholder="Ej: 4x + 2y = 20">
+      <div id="restricciones"></div>
+
+<button type="button" onclick="agregarRestriccion()">+ Añadir restricción</button>
+
+
+      <button type="submit">Resolver</button>
+    </form>
+  </div>
+
+  <script>
+    const radios = document.querySelectorAll('input[name="variables"]');
+    const objetivoInput = document.getElementById('objetivo');
+    const restriccion1 = document.getElementById('restriccion1');
+    const restriccion2 = document.getElementById('restriccion2');
+    const restriccion3 = document.getElementById('restriccion3');
+
+    function actualizarPlaceholders(numVars) {
+      if (numVars === 2) {
+        objetivoInput.placeholder = "Ej: 6x + 4y";
+        restriccion1.placeholder = "Ej: 2x + y <= 12";
+        restriccion2.placeholder = "Ej: x + 3y >= 15";
+        restriccion3.placeholder = "Ej: 4x + 2y = 20";
+      } else if (numVars === 3) {
+        objetivoInput.placeholder = "Ej: 6x + 4y + 3z";
+        restriccion1.placeholder = "Ej: 2x + y + z <= 12";
+        restriccion2.placeholder = "Ej: x + 3y + 2z >= 15";
+        restriccion3.placeholder = "Ej: 4x + 2y + z = 20";
+      }
+    }
+
+    radios.forEach(radio => {
+      radio.addEventListener('change', e => {
+        const val = parseInt(e.target.value, 10);
+        actualizarPlaceholders(val);
+      });
+    });
+
+    // Inicializar al cargar la página
+    document.addEventListener('DOMContentLoaded', () => {
+      const seleccionado = Array.from(radios).find(r => r.checked);
+      if (seleccionado) actualizarPlaceholders(parseInt(seleccionado.value, 10));
+    });
+
+    let contadorRestricciones = 3;
+
+  function agregarRestriccion() {
+    contadorRestricciones++;
+    const div = document.createElement('div');
+    div.innerHTML = `
+      <label for="restriccion${contadorRestricciones}">Restricción ${contadorRestricciones}:</label>
+      <input type="text" id="restriccion${contadorRestricciones}" name="restriccion${contadorRestricciones}" placeholder="Ej: 2x + 3y <= 25">
+    `;
+    document.getElementById('restricciones').appendChild(div);
+  }
+  </script>
+
+</body>
+</html>
